@@ -155,6 +155,9 @@ nav.tabs{grid-template-columns:repeat(2,1fr)}
 .srch{display:flex;flex-direction:column;gap:8px}
 .addb{font:inherit;font-size:13px;font-weight:600;border:1px solid var(--ink);color:var(--ink);background:none;border-radius:8px;padding:6px 12px;cursor:pointer}
 .screen{max-width:440px;margin:6vh auto 0;display:flex;flex-direction:column;gap:16px}
+.card>*,.screen>*{min-width:0;max-width:100%}
+pre.code{max-width:100%}
+html,body{overflow-x:hidden}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:12px}
 .card form{border:0;padding:0;background:none;grid-template-columns:1fr}
 .brand{display:flex;align-items:center;gap:10px}
@@ -478,7 +481,8 @@ const fmt=n=>Math.round(Number(n)||0).toLocaleString('ru-RU').replace(/ /g,' ')
 const som=n=>fmt(n)+" so'm";
 function esc(s){const d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML}
 const rnd=()=>Math.random().toString(36).slice(2,8);
-const PAYS=['Naqd pul','Humo','Uzcard','Visa','Paynet','Xolis','UZQR'];
+const PAYS=['Naqd pul','Humo','Uzcard','Visa','Paynet Xolis','UZQR'];
+const payOf=x=>{const p=x.pay||"Ko'rsatilmagan";return (p==='Paynet'||p==='Xolis')?'Paynet Xolis':p};
 const DOMAIN='savdo-daftari.app';
 const LOGIN_RE=/^[a-z0-9_.-]{3,20}$/;
 let role=null,me=null,myName='',tab='sales',sub='products',unsubs=[];
@@ -661,11 +665,11 @@ function render(){
   const todayS=mine.filter(x=>new Date(x.at)>=day0);
   $('tLabel').textContent=role==='admin'?'Bugungi savdo':'Bugungi savdongiz';
   $('tRev').textContent=som(todayS.reduce((a,x)=>a+x.qty*x.price,0));
-  const tp={};PAYS.forEach(p=>tp[p]=0);todayS.forEach(x=>{const k=x.pay||"Ko'rsatilmagan";tp[k]=(tp[k]||0)+x.qty*x.price});
+  const tp={};PAYS.forEach(p=>tp[p]=0);todayS.forEach(x=>{const k=payOf(x);tp[k]=(tp[k]||0)+x.qty*x.price});
   $('tPays').innerHTML=Object.entries(tp).map(([k,v])=>`<div class="${v?'':'z'}"><span>${esc(k)}</span><i>${fmt(v)}</i></div>`).join('');
   const groups={};todayS.forEach(x=>{const k=x.rid||x.id;(groups[k]=groups[k]||[]).push(x)});
   const gl=Object.entries(groups).sort((a,b)=>b[1][0].at.localeCompare(a[1][0].at));
-  $('salesList').innerHTML=gl.length?gl.map(([k,g])=>{const t=g.reduce((a,x)=>a+x.qty*x.price,0);return `<div class="row"><div class="t"><b class="items" style="color:var(--fg);font-size:14px">${g.map(x=>esc(x.name)+' ×'+fmt(x.qty)).join(', ')}</b><small>${dt(g[0].at)}<span class="paytag">${esc(g[0].pay||'—')}</span>${role==='admin'?`<span class="who">· ${esc(nameOf(g[0]))}</span>`:''}</small></div><div class="v">${fmt(t)}</div>${role==='admin'?`<button class="del" data-receipt="${esc(k)}" aria-label="Chekni o'chirish" title="O'chirish">×</button>`:''}</div>`}).join(''):`<div class="empty">Bugun hali sotuv yo'q. Mahsulotni bosib savatga qo'shing.</div>`;
+  $('salesList').innerHTML=gl.length?gl.map(([k,g])=>{const t=g.reduce((a,x)=>a+x.qty*x.price,0);return `<div class="row"><div class="t"><b class="items" style="color:var(--fg);font-size:14px">${g.map(x=>esc(x.name)+' ×'+fmt(x.qty)).join(', ')}</b><small>${dt(g[0].at)}<span class="paytag">${esc(payOf(g[0]))}</span>${role==='admin'?`<span class="who">· ${esc(nameOf(g[0]))}</span>`:''}</small></div><div class="v">${fmt(t)}</div>${role==='admin'?`<button class="del" data-receipt="${esc(k)}" aria-label="Chekni o'chirish" title="O'chirish">×</button>`:''}</div>`}).join(''):`<div class="empty">Bugun hali sotuv yo'q. Mahsulotni bosib savatga qo'shing.</div>`;
 
   if(role!=='admin')return;
   if(!S.stores.length&&sub!=='stores'&&tab==='admin'){sub='stores';show()}
@@ -692,7 +696,7 @@ function render(){
     $('byStore').innerHTML=se.length?se.map(([k,v])=>bar(esc(storeName(k)),v.r,sm,'sof foyda '+fmt(v.p))).join(''):'<div class="hint">Do\'kon yo\'q.</div>';}
   const bs={};sales.forEach(x=>{const k=nameOf(x);bs[k]=(bs[k]||0)+x.qty*x.price});const bse=Object.entries(bs).sort((a,b)=>b[1]-a[1]),bsm=Math.max(1,...bse.map(x=>x[1]));
   $('byStaff').innerHTML=bse.length?bse.map(([k,v])=>bar(esc(k),v,bsm,rev?Math.round(v/rev*100)+'%':'')).join(''):'<div class="hint">Bu davrda sotuv yo\'q.</div>';
-  const bp={};PAYS.forEach(p=>bp[p]=0);sales.forEach(x=>{const k=x.pay||"Ko'rsatilmagan";bp[k]=(bp[k]||0)+x.qty*x.price});
+  const bp={};PAYS.forEach(p=>bp[p]=0);sales.forEach(x=>{const k=payOf(x);bp[k]=(bp[k]||0)+x.qty*x.price});
   const pe=Object.entries(bp).sort((a,b)=>b[1]-a[1]),pm=Math.max(1,...pe.map(x=>x[1]));
   $('payList').innerHTML=rev>0?pe.map(([k,v])=>bar(esc(k),v,pm,Math.round(v/rev*100)+'%')).join(''):'<div class="hint">Bu davrda tushum yo\'q.</div>';
   const by={};sales.forEach(x=>{const k=x.name;by[k]=by[k]||{q:0,p:0};by[k].q+=x.qty;by[k].p+=x.qty*(x.price-costAt(x.productId,x.at))});
